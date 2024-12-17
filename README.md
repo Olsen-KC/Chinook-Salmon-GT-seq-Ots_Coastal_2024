@@ -11,5 +11,5 @@
 
 ## 2020_2021_Umpqua_OC: R object of filtered genotypes and metadata from #1 
 ## 2020_Rogue: R object of filtered genotypes and metadata from #2 
-## 2023_Fall_Coastal_Chinook: Initial output form GT-seq genotyping, quality filtering record, and R object of filtered genotypes. 
-## Consolidation: R markdown html script 
+## 2023_Fall_Coastal_Chinook: Initial output from GT-seq genotyping, quality filtering record, and R object of filtered genotypes. 
+## Consolidation: R markdown html script detailing the joining of genotype files. Combined genotype/metadata files with those markers present across genotyping efforts (Ots_coastal_2024_298_markers.R) and all markers that passed quality filtering in each genotyping effort (Ots_coastal_2024_339_markers.R).  
