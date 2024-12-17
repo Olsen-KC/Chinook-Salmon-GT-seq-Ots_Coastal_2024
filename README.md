@@ -11,4 +11,5 @@
 
 ## 2020_2021_Umpqua_OC: R object of filtered genotypes and metadata from #1 
 ## 2020_Rogue: R object of filtered genotypes and metadata from #2 
-## 2023_Coastal_Chinook: 
+## 2023_Fall_Coastal_Chinook: Initial output form GT-seq genotyping, quality filtering record, and R object of filtered genotypes. 
+## 
