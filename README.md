@@ -8,3 +8,7 @@
 ## 3. 2023 - Fall Chinook. Link [here](https://github.com/Olsen-KC/Ots_Coastal_2024/tree/main/2023_Fall_Coastal_Chinook)
 
 ## 4. 2023 - Coquille. Link [here](https://github.com/Olsen-KC/Ots_COQR_2023/tree/main/filtering_record_filtered_genotypes) 
+
+## 2020_2021_Umpqua_OC: R object containing filtered genotyped from #1 
+## Rogue: R object with filtered genotypes from #2 
+## Fall Chinook: 
