@@ -1,5 +1,5 @@
 # Ots_Coastal_2024
-## Objective is to consolidate datasets from four different genotyping efforts for the project on Coastal Chinook salmon (Oncorhynchus tshawytscha). Genotyping efforts 1 & 2 were conducted and quality filtered by David I Dayan (DID), efforts 3 & 4 were conducted and quality filtered by Kevin C Olsen (KCO). 
+## Objective is to consolidate datasets from four different genotyping efforts in order to evaluate the genetic diversity and connectivity of Chinook salmon (Oncorhynchus tshawytscha) in Northern California and Oregon. Genotyping efforts 1 & 2 were conducted and quality filtered by David I Dayan (DID), efforts 3 & 4 were conducted and quality filtered by Kevin C Olsen (KCO). 
 
 ## 1. 2020/2021 - Coastal Chinook includes North & South Umpqua and Oregon Coast (OC). Link [here](https://github.com/david-dayan/Umpqua_Ots_OC_or_SONCC/tree/main/genotype_data/OC_Umpqua)
 
@@ -12,4 +12,4 @@
 ## 2020_2021_Umpqua_OC: R object of filtered genotypes and metadata from #1 
 ## 2020_Rogue: R object of filtered genotypes and metadata from #2 
 ## 2023_Fall_Coastal_Chinook: Initial output form GT-seq genotyping, quality filtering record, and R object of filtered genotypes. 
-## 
+## Consolidation: R markdown html script 
