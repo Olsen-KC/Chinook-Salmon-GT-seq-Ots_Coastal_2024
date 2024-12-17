@@ -9,6 +9,6 @@
 
 ## 4. 2023 - Coquille. Link [here](https://github.com/Olsen-KC/Ots_COQR_2023/tree/main/filtering_record_filtered_genotypes) 
 
-## 2020_2021_Umpqua_OC: R object containing filtered genotyped from #1 
-## Rogue: R object with filtered genotypes from #2 
-## Fall Chinook: 
+## 2020_2021_Umpqua_OC: R object of filtered genotypes and metadata from #1 
+## 2020_Rogue: R object of filtered genotypes and metadata from #2 
+## 2023_Coastal_Chinook: 
