@@ -1,0 +1,311 @@
+---
+title: "Ots_Coastal_Chinook_Genotype_Consolidation"
+author: "Kevin Olsen"
+date: "2024-12-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(magrittr)
+library(kableExtra)
+library(gtsummary)
+```
+
+Objective is to consolidate datasets from four different genotyping efforts for the Coastal Chinook project. Genotyping efforts 1 & 2 were conducted and quality filtered by David I Dayan (DID), efforts 3 & 4 were conducted and quality filtered by Kevin C Olsen (KCO). 
+
+1. 2020/2021 - Coastal Chinook includes North & South Umpqua and Oregon Coast (OC). Link [here](https://github.com/david-dayan/Umpqua_Ots_OC_or_SONCC/tree/main/genotype_data/OC_Umpqua)
+
+2. 2020 - Rogue. Link [here](https://github.com/david-dayan/Umpqua_Ots_OC_or_SONCC/tree/main/genotype_data/Rogue)
+
+3. 2023 - Fall Chinook. Link [here](https://github.com/Olsen-KC/Ots_Coastal_2024/tree/main/2023_Fall_Coastal_Chinook)
+
+4. 2023 - Coquille. Link [here](https://github.com/Olsen-KC/Ots_COQR_2023/tree/main/filtering_record_filtered_genotypes) 
+
+Load the quality filtered 2020/2021 Umpqua/Oregon Coast (OC) dataset and rename it. 
+This dataset contains 977 samples genotyped at 324 markers and a sex marker.
+```{r}
+load("C:/Users/olsenk2/OneDrive - Oregon State University/Desktop/Coastal chinook/2020_genotyping_dayan/Umpqua_Ots_OC_or_SONCC/genotype_data/OC_Umpqua/OC_genos_2.2.R")
+genos_OC_UMP <- genos_2.2
+rm(genos_2.2)
+```
+
+Load the 2020 Rogue dataset and rename it. 
+This dataset contains 296 samples genotyped at 331 markers and a sex marker.
+```{r}
+load("C:/Users/olsenk2/OneDrive - Oregon State University/Desktop/Coastal chinook/2020_genotyping_dayan/Umpqua_Ots_OC_or_SONCC/genotype_data/Rogue/Rogue_genotypes_2.2.R")
+genos_Rogue <- genos_2.2
+rm(genos_2.2)
+```
+
+Identify the 319 markers in common in both datasets. 
+```{r}
+##Other than "Greb1L SNP1" and "Greb1L SNP2" in the Rogue dataset, markers all start with 'Ots' 
+##Use string detect to distinguish marker columns from metadata in Umpqua/OC and Rogue datasets
+markers_OC_UMP<-colnames(genos_OC_UMP)[which(str_detect(colnames(genos_OC_UMP), "Ots") == TRUE)]
+markers_Rogue<-colnames(genos_Rogue)[which(str_detect(colnames(genos_Rogue), "Ots") == TRUE)]
+
+##Use intersect command from lubridate to identify markers in both datasets
+markers_common<-intersect(markers_OC_UMP, markers_Rogue)
+
+kable(markers_common, col.names = c("Marker"))
+```
+
+2020 Rogue dataset is missing columns for phenotypic run, Population, stream, sex, meps, fork length, latitude, and longitude. 
+Add these columns to the Rogue dataset so that we don't lose this information from the 2020/2021 Umpqua/OC dataset when we merge them together. 
+```{r}
+genos_Rogue %<>% 
+  mutate(run = NA,
+         Population = "ROGR",
+         stream = "Rogue River",
+         sex = NA, 
+         meps = NA, 
+         fl = NA, 
+         lat = NA, 
+         lon = NA) %>%
+  rename(origin = NOR_HOR)
+```
+
+Identify metadata and markers in common in 2020/2021 Umpqua/OC and 2020 Rogue datasets. 
+Merge them into a single dataframe.
+```{r}
+genos_Rogue %<>% 
+  mutate(date = as.character(date))
+
+# Identify columns in common in Rogue and Umpqua/OC datasets
+cols_common <- intersect(names(genos_Rogue), names(genos_OC_UMP))
+
+# Merge Rogue and Umpqua/OC datasets with bind_rows ###
+genos_Rogue_OC_UMP <- bind_rows(
+    select(genos_Rogue, all_of(cols_common)),
+    select(genos_OC_UMP, all_of(cols_common)))
+
+genos_Rogue_OC_UMP %<>%
+  mutate(run = stringr::str_to_lower(run))     ##make "Spring" and "Fall" phenotypic runs lowercase
+```
+
+Check if sample sizes of the combined dataset match those in DID's exploratory 'Umpqua ESU Analysis'.
+Note, for the Rogue River samples, DID conducted additional analyses to characterize the Fall/Spring run timing based on their Chromosome 28 genotypes (Rogue Spring Chinook Salmon Conservation Plan). These genotypic characterizations of run timing are distinct from the phenotypic run characterizations made in the other datasets, so sample sizes for run timing in the Rogue will be different here from DID's analysis. Also, DID did not include 87 individuals (after quality filtering) with discordant run timing genotypes (i.e., Fall run at one marker and Spring run at another marker), we decided not to exclude these individuals, so this will also contribute to different sample sizes for the Rogue population. All other populations should have the same sample sizes here and in DID's analysis. 
+
+It can be a challenge to get tables in R to explicitly represent missing (i.e. NA) sample sizes. 
+To resolve this, lets make a new dataframe and replace NA's with 'missing' for the tables.
+```{r}
+## Replace NA with 'missing'##
+genos_1.1 <- genos_Rogue_OC_UMP %>%
+  mutate(run = case_when(is.na(run) == TRUE ~ 'missing', 
+                         TRUE ~ run)) %>%
+  mutate(origin = case_when(is.na(origin) == TRUE ~ 'missing', 
+                            TRUE ~ origin))
+
+genos_1.1$run<-factor(genos_1.1$run, levels = c("fall", "spring", "missing"))    ## Set order to 'fall', 'spring', 'missing' 
+genos_1.1$origin<-factor(genos_1.1$origin, levels = c("HOR", "NOR", "missing"))   ## Set order to 'HOR', 'NOR', 'missing'
+```
+
+Make a table of sample sizes for Fall and Spring Run within each population.
+```{r}
+kable(table(genos_1.1$Population, genos_1.1$run))
+```
+
+Make a table of sample sizes for Hatchery- and Natural-origin salmon within each population.
+```{r}
+kable(table(genos_1.1$Population, genos_1.1$origin))
+```
+
+Other than in the 2020 Rogue, sample sizes in the combined dataset here match those in DID's exploratory analysis (Tables 1 & 2). In total, the combined Umpqua/OC/Rogue dataset contains 1,273 samples genotyped at 318 markers and a sex marker.
+Remove dataset with explicit NAs.
+```{r}
+rm(genos_1.1) 
+```
+
+The 2023 genotyping effort consists of two datasets: 1. Fall Chinook and 2. Coquille River.  
+
+Load quality filtered 2023 Fall Chinook genotyping effort. 
+This dataset contains 351 samples genotyped at 346 markers and a sex marker.
+```{r}
+load("C:/Users/olsenk2/OneDrive - Oregon State University/Desktop/Coastal chinook/2023_genotyping/coastal_chinook_2023_QC_filtered_genotypes_2.0.R")
+genos_Ots_23<-genos_2.0
+rm(genos_2.0)
+```
+
+Load quality filtered 2023 Coquille dataset.
+This dataset contains 407 samples genotyped at 327 markers and a sex marker.
+```{r}
+load("C:/Users/olsenk2/OneDrive - Oregon State University/Desktop/OtsAC22_23COQR/filtering_record_filtered_genotypes/Ots COQR 22_23 genos_2.0.R")
+genos_COQR<-genos_2.0 
+rm(genos_2.0)
+```
+
+Identify the 318 markers in common in 2023 Fall coastal and 2023 Coquille datasets. 
+```{r}
+##Markers all start with 'Ots'. Use string detect to distinguish marker columns from metadata in Fall coastal and Coquille datasets
+markers_Ots_23<-colnames(genos_Ots_23)[which(str_detect(colnames(genos_Ots_23), "Ots") == TRUE)]
+markers_COQR<-colnames(genos_COQR)[which(str_detect(colnames(genos_COQR), "Ots") == TRUE)]
+
+##Use intersect command from lubridate to identify markers in both datsets
+markers_common<-intersect(markers_Ots_23, markers_COQR)
+
+kable(markers_common, col.names = c("Marker"))
+```
+
+Add sample metadata to both datasets and conform format to match that of the Umpqua/OC/Rogue dataset.
+First, the 2023 Fall Chinook dataset. Pull year sampled from SFGL sample name.
+Read in metadata for 2023 Fall Chinook samples and merge matadata to genotypes with left_join. 
+```{r, message=FALSE}
+##add column for year sampled  
+genos_Ots_23 %<>%
+  mutate(year = substr(sample_simple, 6, 7)) %>%
+  relocate(Sample, sample_simple, adapter, `Raw Reads`, `On-Target Reads`, `%On-Target`, `%GT`,  IFI, year)
+
+##read in 2023 genotyping metadata 
+coastal_2023_meta<-read_csv("C:/Users/olsenk2/OneDrive - Oregon State University/Desktop/Coastal chinook/Coastal Chinook 2023 metadata.csv")
+
+## Merge metadata 
+genos_Ots_23 %<>%
+  left_join(coastal_2023_meta, by = c("sample_simple" = "sample")) 
+
+## Rename 'sample_simple' to 'sample' 
+## Add blank latitude and longitude columns as none of these samples had GPS coordinates
+genos_Ots_23 %<>%
+  mutate(lat = NA, 
+         lon = NA) %>%
+  rename(sample = sample_simple)
+```
+
+Second, the 2023 Coquille dataset. Pull year sampled and population from SFGL sample name.
+Read in metadata for 2023 Coquille samples and merge matadata to genotypes with left_join. 
+```{r, message=FALSE}
+##add columns for population and year sampled 
+genos_COQR %<>%
+  mutate(Population = substr(sample_simple, 8, 11)) %>%
+  mutate(year = substr(sample_simple, 6, 7)) %>%
+  relocate(Sample, sample_simple, adapter, `Raw Reads`, `On-Target Reads`, `%On-Target`, `%GT`,  IFI, Population, year)
+
+##read in Coquille metadata## 
+COQR_22_23_meta<-read_csv("C:/Users/olsenk2/OneDrive - Oregon State University/Desktop/OtsAC22_23COQR/metadata/Ots22_23COQR_meta.csv") 
+
+##Merge metadata 
+genos_COQR %<>%
+  left_join(COQR_22_23_meta, by = c("sample_simple" = "IndividualName"))
+
+##Rename 'sample_simple' to 'sample'
+##Add blank latitude and longitude columns as none of these samples had GPS coordinates
+##Add blank meps as these samples did not have meps lengths
+genos_COQR %<>%
+  mutate(lat = NA, 
+         lon = NA, 
+         meps = NA) %>%
+  rename(sample = sample_simple, location = IndividualSampleLOCATION, stream = Stream, sex = Gender, date = DateSampled, run = Run, fl = `Forklength(mm)`, origin = `WILDorHAT?`) 
+
+## For origin, replace 'W' with 'NOR' and 'H' with 'HOR'
+genos_COQR %<>%
+  mutate(origin = case_when(origin == "W" ~ 'NOR',
+                            origin == "H" ~ 'HOR'))
+```
+
+Identify metadata and markers in common in 2023 Fall Chinook and 2023 Coquille datasets. 
+Merge them into a single dataframe.
+The combined 2023 Fall Chinook/Coquille dataset contains 758 samples genotyped at 317 markers and a sex marker.
+```{r}
+# Identify columns in common in Fall coastal and Coquille datasets
+cols_common <- intersect(names(genos_Ots_23), names(genos_COQR))
+
+# Merge Fall coastal and Coquille datasets with bind_rows ###
+genos_Ots_23_COQR <- bind_rows(
+    select(genos_Ots_23, all_of(cols_common)),
+    select(genos_COQR, all_of(cols_common))) 
+```
+
+Now we will merge the 2020/2021 Umpqua/OC/Rogue and 2023 Fall Chinook/Coquille datasets.
+
+Identify the 298 markers in common in both of the combined datasets. 
+```{r}
+##Markers all start with 'Ots'. Use string detect to distinguish marker columns from metadata in Umpqua/OC/Rogue and Fall coastal/Coquille datasets
+markers_Rogue_OC_UMP<-colnames(genos_Rogue_OC_UMP)[which(str_detect(colnames(genos_Rogue_OC_UMP), "Ots") == TRUE)]
+markers_Ots_23_COQR<-colnames(genos_Ots_23_COQR)[which(str_detect(colnames(genos_Ots_23_COQR), "Ots") == TRUE)]
+
+##Use intersect command from lubridate to identify markers in both datsets
+markers_common<-intersect(markers_Rogue_OC_UMP, markers_Ots_23_COQR)
+
+kable(markers_common, col.names = c("Marker"))
+```
+
+Ultimately, we want to create two datasets consisting of 1. only those markers present in both datasets and 2. all markers genotyped in either dataset.
+Create the first combined dataset (i.e., only those markers present in both datasets).
+This dataset contains 2,031 samples genotyped at 297 markers and a sex marker.
+```{r}
+# Identify columns in common
+cols_common <- intersect(names(genos_Rogue_OC_UMP), names(genos_Ots_23_COQR))
+
+# Merge datasets with bind_rows
+combined_1 <- bind_rows(
+    select(genos_Rogue_OC_UMP, all_of(cols_common)),
+    select(genos_Ots_23_COQR, all_of(cols_common))) 
+
+combined_1 %<>%
+  relocate(sample, date, origin, location, run, Population, stream, sex, meps, fl, lat, lon) %>%
+  mutate(run = stringr::str_to_lower(run)) %>%     ##make "Spring" and "Fall" phenotypic runs lowercase
+  ungroup()
+```
+
+Create the second combined dataset (i.e., all markers genotyped in either dataset).
+This dataset contains 2,031 samples genotyped at 338 markers and a sex marker.
+```{r}
+##Identify markers in the Umpqua/OC/Rogue dataset ("A") that are not in the Fall Coastal/Coquille dataset ("B")
+A<-colnames(genos_Rogue_OC_UMP)[which(! colnames(genos_Rogue_OC_UMP) %in% colnames(genos_Ots_23_COQR))]
+
+##Add "A" markers to the Fall Coastal Coquille dataset as 'NA'
+genos_Ots_23_COQR_and_A<-genos_Ots_23_COQR %>%
+  mutate(`[<-`(genos_Ots_23_COQR, A, value = NA))
+
+##Identify markers in the Fall Coastal/Coquille dataset ("B") that are not in the Umpqua/OC/Rogue dataset
+B<-colnames(genos_Ots_23_COQR)[which(! colnames(genos_Ots_23_COQR) %in% colnames(genos_Rogue_OC_UMP))]
+
+B<-B[which(str_detect(B, "Ots") == TRUE)]        ##drop "Sample", "adapter", and "year" from the list
+
+##Add "B" markers to the Umpqua/OC/Rogue dataset as 'NA' 
+genos_Rogue_OC_UMP_and_B<-as.data.frame(genos_Rogue_OC_UMP) %>%
+  mutate(`[<-`(genos_Rogue_OC_UMP, B, value = NA))
+
+##Identify columns in common 
+cols_common <- intersect(names(genos_Rogue_OC_UMP_and_B), names(genos_Ots_23_COQR_and_A))
+
+##Merge datasets with bind_rows
+combined_2 <- bind_rows( 
+  select(genos_Rogue_OC_UMP_and_B, all_of(cols_common)), 
+  select(genos_Ots_23_COQR_and_A, all_of(cols_common))) 
+
+combined_2 %<>%
+  relocate(sample, date, origin, location, run, Population, stream, sex, meps, fl, lat, lon)
+```
+
+Make a table of sample sizes for Fall and Spring Run within each population.
+```{r}
+## Replace NA with 'missing'##
+genos_1.1 <- combined_1 %>%
+  mutate(run = case_when(is.na(run) == TRUE ~ 'missing', 
+                         TRUE ~ run)) %>%
+  mutate(origin = case_when(is.na(origin) == TRUE ~ 'missing', 
+                            TRUE ~ origin))
+
+genos_1.1$run<-factor(genos_1.1$run, levels = c("fall", "spring", "missing"))    ## Set order to 'fall', 'spring', 'missing' 
+genos_1.1$origin<-factor(genos_1.1$origin, levels = c("HOR", "NOR", "missing"))   ## Set order to 'HOR', 'NOR', 'missing'
+
+kable(table(genos_1.1$Population, genos_1.1$run))
+```
+
+```{r}
+kable(table(genos_1.1$Population, genos_1.1$origin))
+```
+
+Save both datasets as R objects and export metadata for all samples as a csv file. 
+```{r}
+save(combined_1, file = "C:/Users/olsenk2/OneDrive - Oregon State University/Desktop/Coastal chinook/Ots_coastal_2024_298_markers.R")
+save(combined_2, file = "C:/Users/olsenk2/OneDrive - Oregon State University/Desktop/Coastal chinook/Ots_coastal_2024_339_markers.R")
+
+write.csv(combined_1[, 1:12], file = "C:/Users/olsenk2/OneDrive - Oregon State University/Desktop/Coastal chinook/Ots_coastal_2024_meta.csv")
+```
+
